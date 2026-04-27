@@ -1,0 +1,5 @@
+user_id,account_ref,timestamp,activity_type,asset_name,symbol,instrument_type,amount,price,value,currency,profit_loss_value,profit_loss_pct,holdings_after,raw_json
+demo,manual:cmc,2026-04-21T09:00:00Z,deposit,US Dollar,USD,spot,75612.00,1.00,75612.00,USD,,,75612.00,"{\"note\":\"initial cash deposit\"}"
+demo,manual:cmc,2026-04-21T09:05:00Z,buy,Bitcoin,BTC,spot,1.0000,75600.00,75600.00,USD,,,1.0000,"{\"note\":\"buy to establish BTC position\"}"
+demo,manual:cmc,2026-04-21T09:05:01Z,fee,US Dollar,USD,spot,12.00,1.00,12.00,USD,,,-12.00,"{\"note\":\"fee represented as activity_type, not a dedicated schema field\"}"
+demo,manual:cmc,2026-04-22T10:01:45Z,snapshot_update,Bitcoin,BTC,spot,0,78023.63,78023.63,USD,2423.63,3.2059,1.0000,"{\"note\":\"transaction history can carry valuation updates using CMC-like fields\"}"
