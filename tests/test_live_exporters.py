@@ -13,8 +13,8 @@ from pft_portfolio.exporters.solana import export_solana_snapshot, export_solana
 
 HYPERLIQUID_TOP_VAULT = "0xd6e56265890b76413d1d527eb9b75e334c0c5b42"
 BTC_GENESIS_ADDRESS = "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"
-ETH_FOUNDATION_ADDRESS = "0xde0B295669a9FD93d5F28D9Ec85E40f4cb697BAe"
-WRAPPED_SOL_MINT = "So11111111111111111111111111111111111111112"
+ETH_BEACON_DEPOSIT_CONTRACT = "0x00000000219ab540356cBB839Cbe05303d7705Fa"
+SOL_PUBLIC_WALLET = "AwA1urYEnZpCQfkB9w9rFAhTSicqniimBfu9yNnuZTSf"
 
 
 @pytest.mark.live
@@ -69,8 +69,8 @@ def test_live_ethereum_address_exports_snapshot_and_transactions(tmp_path: Path)
     snapshot_csv = tmp_path / "eth_snapshot.csv"
     transactions_csv = tmp_path / "eth_transactions.csv"
 
-    export_ethereum_snapshot(ETH_FOUNDATION_ADDRESS, snapshot_csv)
-    export_ethereum_transaction_history(ETH_FOUNDATION_ADDRESS, transactions_csv, limit=2)
+    export_ethereum_snapshot(ETH_BEACON_DEPOSIT_CONTRACT, snapshot_csv)
+    export_ethereum_transaction_history(ETH_BEACON_DEPOSIT_CONTRACT, transactions_csv, limit=2)
 
     snapshot = ingest_portfolio_snapshot_csv(snapshot_csv)
     transactions = ingest_transaction_history_csv(transactions_csv)
@@ -79,6 +79,7 @@ def test_live_ethereum_address_exports_snapshot_and_transactions(tmp_path: Path)
     assert snapshot["positions"][0]["amount"] is not None
     assert len(transactions["transactions"]) == 2
     assert {record["symbol"] for record in transactions["transactions"]} == {"ETH"}
+    assert all(record["amount"] != "0" for record in transactions["transactions"])
 
 
 @pytest.mark.live
@@ -86,8 +87,8 @@ def test_live_solana_address_exports_snapshot_and_transactions(tmp_path: Path) -
     snapshot_csv = tmp_path / "sol_snapshot.csv"
     transactions_csv = tmp_path / "sol_transactions.csv"
 
-    export_solana_snapshot(WRAPPED_SOL_MINT, snapshot_csv)
-    export_solana_transaction_history(WRAPPED_SOL_MINT, transactions_csv, limit=1)
+    export_solana_snapshot(SOL_PUBLIC_WALLET, snapshot_csv)
+    export_solana_transaction_history(SOL_PUBLIC_WALLET, transactions_csv, limit=1)
 
     snapshot = ingest_portfolio_snapshot_csv(snapshot_csv)
     transactions = ingest_transaction_history_csv(transactions_csv)
@@ -95,3 +96,4 @@ def test_live_solana_address_exports_snapshot_and_transactions(tmp_path: Path) -
     assert snapshot["positions"][0]["amount"] is not None
     assert len(transactions["transactions"]) == 1
     assert transactions["transactions"][0]["symbol"] == "SOL"
+    assert transactions["transactions"][0]["amount"] != "0"

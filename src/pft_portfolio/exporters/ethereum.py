@@ -64,9 +64,17 @@ def export_ethereum_transaction_history(
     account_ref: str | None = None,
     blockscout_base: str = DEFAULT_BLOCKSCOUT_BASE,
     limit: int = 25,
+    include_failed: bool = False,
+    include_zero_value: bool = False,
 ) -> Path:
     data = get_json(f"{blockscout_base.rstrip('/')}/addresses/{address}/transactions")
-    rows = [_tx_row(tx, address, user_id, account_ref or f"eth:{address}") for tx in (data.get("items") or [])[:limit]]
+    rows = []
+    for tx in data.get("items") or []:
+        if not _include_eth_transaction(tx, include_failed=include_failed, include_zero_value=include_zero_value):
+            continue
+        rows.append(_tx_row(tx, address, user_id, account_ref or f"eth:{address}"))
+        if len(rows) >= limit:
+            break
     return write_transaction_csv(output_path, rows)
 
 
@@ -88,7 +96,7 @@ def _tx_row(tx: dict[str, Any], address: str, user_id: str, account_ref: str) ->
         "chain": "ETH",
         "address": address,
         "tx_hash": tx.get("hash"),
-        "block_number": tx.get("block"),
+        "block_number": tx.get("block") or tx.get("block_number"),
         "external_id": tx.get("hash"),
         "counterparty": to_addr if is_outbound else from_addr,
         "amount": decimal_from_base_units(value_wei, 18),
@@ -100,3 +108,14 @@ def _tx_row(tx: dict[str, Any], address: str, user_id: str, account_ref: str) ->
         "holdings_after": None,
         "raw_json": raw_json({"hash": tx.get("hash"), "status": tx.get("status"), "from": from_addr, "to": to_addr}),
     }
+
+
+def _include_eth_transaction(tx: dict[str, Any], *, include_failed: bool, include_zero_value: bool) -> bool:
+    if not include_failed and str(tx.get("status") or "").lower() in {"error", "failed"}:
+        return False
+    if include_zero_value:
+        return True
+    try:
+        return int(tx.get("value") or 0) != 0
+    except (TypeError, ValueError):
+        return False

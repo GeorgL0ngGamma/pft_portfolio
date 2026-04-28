@@ -77,6 +77,7 @@ def _tx_row(tx: dict[str, Any], address: str, user_id: str, account_ref: str) ->
     )
     net = received - spent
     timestamp = tx.get("status", {}).get("block_time")
+    block_height = tx.get("status", {}).get("block_height")
     return {
         "user_id": user_id,
         "account_ref": account_ref,
@@ -89,6 +90,7 @@ def _tx_row(tx: dict[str, Any], address: str, user_id: str, account_ref: str) ->
         "chain": "BTC",
         "address": address,
         "tx_hash": tx.get("txid"),
+        "block_number": block_height,
         "external_id": tx.get("txid"),
         "amount": decimal_from_base_units(abs(net), 8),
         "price": None,

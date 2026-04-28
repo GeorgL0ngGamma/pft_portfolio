@@ -60,16 +60,33 @@ def export_solana_transaction_history(
     account_ref: str | None = None,
     rpc_url: str = DEFAULT_RPC_URL,
     limit: int = 10,
+    include_failed: bool = False,
+    include_zero_delta: bool = False,
 ) -> Path:
-    signatures = _rpc(rpc_url, "getSignaturesForAddress", [address, {"limit": limit}])["result"]
     rows = []
-    for signature in signatures:
-        tx = _rpc(
-            rpc_url,
-            "getTransaction",
-            [signature["signature"], {"encoding": "json", "maxSupportedTransactionVersion": 0}],
-        ).get("result")
-        rows.append(_tx_row(signature, tx, address, user_id, account_ref or f"sol:{address}"))
+    before = None
+    while len(rows) < limit:
+        options: dict[str, Any] = {"limit": min(max(limit * 5, 10), 100)}
+        if before:
+            options["before"] = before
+        signatures = _rpc(rpc_url, "getSignaturesForAddress", [address, options])["result"]
+        if not signatures:
+            break
+        before = signatures[-1].get("signature")
+        for signature in signatures:
+            if not include_failed and signature.get("err") is not None:
+                continue
+            tx = _rpc(
+                rpc_url,
+                "getTransaction",
+                [signature["signature"], {"encoding": "json", "maxSupportedTransactionVersion": 0}],
+            ).get("result")
+            delta = _native_balance_delta(tx, address) if tx else 0
+            if not include_zero_delta and delta == 0:
+                continue
+            rows.append(_tx_row(signature, tx, address, user_id, account_ref or f"sol:{address}", delta=delta))
+            if len(rows) >= limit:
+                break
     return write_transaction_csv(output_path, rows)
 
 
@@ -80,13 +97,24 @@ def _rpc(url: str, method: str, params: list[Any]) -> dict[str, Any]:
     return response
 
 
-def _tx_row(signature: dict[str, Any], tx: dict[str, Any] | None, address: str, user_id: str, account_ref: str) -> dict[str, Any]:
-    delta = _native_balance_delta(tx, address) if tx else 0
+def _tx_row(
+    signature: dict[str, Any],
+    tx: dict[str, Any] | None,
+    address: str,
+    user_id: str,
+    account_ref: str,
+    *,
+    delta: int | None = None,
+) -> dict[str, Any]:
+    balance_delta = _native_balance_delta(tx, address) if delta is None and tx else (delta or 0)
+    fee_lamports = (tx.get("meta") or {}).get("fee") if tx else None
+    signer = _first_signer(tx)
+    counterparty = signer if signer and signer != address else None
     return {
         "user_id": user_id,
         "account_ref": account_ref,
         "timestamp": _seconds_to_rfc3339(signature.get("blockTime")),
-        "activity_type": "deposit" if delta >= 0 else "withdrawal",
+        "activity_type": "deposit" if balance_delta >= 0 else "withdrawal",
         "asset_name": "Solana",
         "symbol": "SOL",
         "instrument_type": "spot",
@@ -96,7 +124,10 @@ def _tx_row(signature: dict[str, Any], tx: dict[str, Any] | None, address: str, 
         "tx_hash": signature.get("signature"),
         "block_number": signature.get("slot"),
         "external_id": signature.get("signature"),
-        "amount": decimal_from_base_units(abs(delta), 9),
+        "counterparty": counterparty,
+        "fee_amount": decimal_from_base_units(fee_lamports, 9) if fee_lamports is not None else None,
+        "fee_symbol": "SOL" if fee_lamports is not None else None,
+        "amount": decimal_from_base_units(abs(balance_delta), 9),
         "price": None,
         "value": None,
         "currency": "USD",
@@ -105,6 +136,21 @@ def _tx_row(signature: dict[str, Any], tx: dict[str, Any] | None, address: str, 
         "holdings_after": None,
         "raw_json": raw_json({"signature": signature.get("signature"), "slot": signature.get("slot"), "err": signature.get("err")}),
     }
+
+
+def _first_signer(tx: dict[str, Any] | None) -> str | None:
+    if not tx:
+        return None
+    message = tx.get("transaction", {}).get("message", {})
+    keys = message.get("accountKeys") or []
+    for item in keys:
+        if isinstance(item, dict) and item.get("signer"):
+            return item.get("pubkey")
+    required_signatures = int((message.get("header") or {}).get("numRequiredSignatures") or 0)
+    if required_signatures and keys:
+        first = keys[0]
+        return first.get("pubkey") if isinstance(first, dict) else first
+    return None
 
 
 def _native_balance_delta(tx: dict[str, Any], address: str) -> int:
