@@ -44,10 +44,14 @@ def semantic_identity(value: dict[str, Any]) -> dict[str, Any]:
         )
     if input_type == "portfolio_snapshot":
         return _identity(value, "input_type", "user_id", "account_ref", "as_of", "currency")
-    if input_type == "transaction_history" and value.get("tx_hash"):
-        return _identity(value, "input_type", "user_id", "chain", "tx_hash", "log_index")
-    if input_type == "transaction_history" and value.get("external_id"):
+    if input_type == "transaction_history" and value.get("venue") and value.get("external_id"):
         return _identity(value, "input_type", "user_id", "venue", "external_id")
+    if input_type == "transaction_history" and value.get("chain") and value.get("tx_hash"):
+        return _identity(value, "input_type", "user_id", "chain", "tx_hash", "log_index")
+    if input_type == "transaction_history" and value.get("tx_hash"):
+        return _identity(value, "input_type", "user_id", "account_ref", "tx_hash", "log_index", "activity_type")
+    if input_type == "transaction_history" and value.get("external_id"):
+        return _identity(value, "input_type", "user_id", "account_ref", "external_id", "activity_type")
     if input_type == "transaction_history":
         return _identity(
             value,
