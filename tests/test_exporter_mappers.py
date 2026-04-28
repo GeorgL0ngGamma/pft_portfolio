@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pft_portfolio.canonical import semantic_id
 from pft_portfolio.exporters.ccxt_exchange import _fee_row, _trade_row
 from pft_portfolio.exporters.ethereum import _include_eth_transaction
 from pft_portfolio.exporters.solana import _tx_row
@@ -34,6 +35,22 @@ def test_ccxt_trade_rows_preserve_venue_address_and_transaction_hash() -> None:
     assert fee["address"] == "0xvault"
     assert fee["tx_hash"] == "0xabc"
     assert fee["external_id"] == "fee:tid-1"
+
+
+def test_venue_external_id_prevents_hash_collision_between_trade_and_fee_rows() -> None:
+    base = {
+        "input_type": "transaction_history",
+        "user_id": "prototype",
+        "account_ref": "hyperliquid:0xvault",
+        "timestamp": "2026-04-28T16:41:12Z",
+        "symbol": "HYPE/USDC:USDC",
+        "venue": "hyperliquid",
+        "tx_hash": "0xabc",
+    }
+    trade = {**base, "activity_type": "buy", "external_id": "tid-1", "amount": "1", "price": "10", "value": "10"}
+    fee = {**base, "activity_type": "fee", "external_id": "fee:tid-1", "amount": "0.01", "price": "1", "value": "0.01"}
+
+    assert semantic_id("txn", trade) != semantic_id("txn", fee)
 
 
 def test_solana_row_preserves_fee_counterparty_and_nonzero_delta() -> None:
