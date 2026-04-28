@@ -1,8 +1,8 @@
 # pft_portfolio
 
-CSV-first portfolio-history ingestion scaffold for Post Fiat reviewers and TaskNode portfolio context.
+CSV-first portfolio ingestion and storage prototype for Post Fiat reviewers and TaskNode portfolio context.
 
-## Direction
+## Overview
 
 The package accepts two dated CSV inputs:
 
@@ -21,7 +21,7 @@ This deliberately keeps CSV as the boundary between data pulling and portfolio-h
 
 The production storage target is Postgres with `pgvector`. JSONL remains available as a reviewer-readable local/debug backend.
 
-## Primitive Vocabulary
+## Data Model
 
 `input_type` is intentionally small:
 
@@ -36,7 +36,7 @@ The production storage target is Postgres with `pgvector`. JSONL remains availab
 - `option`
 - `yield`
 
-There is no `source_type`, `state_model`, or dedicated `record_type` in this v0 scaffold. CSV provenance is carried by `source_csv`, `source_row`, and preserved raw CSV row content after ingestion. Chain, exchange, and protocol provenance are explicit optional fields.
+The top-level contract is intentionally small: snapshots describe point-in-time state, and transaction histories describe dated economic events. CSV provenance is carried by `source_csv`, `source_row`, and preserved raw CSV row content after ingestion. Chain, exchange, and protocol provenance are explicit optional fields.
 
 ## CSV Fields
 
@@ -119,12 +119,12 @@ The proof sources are intentionally public and require no private keys:
 
 ```text
 BTC address: 1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa
-ETH address: 0xde0B295669a9FD93d5F28D9Ec85E40f4cb697BAe
-SOL address: So11111111111111111111111111111111111111112
+ETH address: 0x00000000219ab540356cBB839Cbe05303d7705Fa
+SOL address: AwA1urYEnZpCQfkB9w9rFAhTSicqniimBfu9yNnuZTSf
 Hyperliquid vault: 0xd6e56265890b76413d1d527eb9b75e334c0c5b42
 ```
 
-The Hyperliquid address is the public `[ Systemic Strategies ] HyperGrowth` vault. It is a normal user vault, not HLP or Liquidator, and is fetched through the same CCXT venue path used by other exchange-like accounts.
+The ETH source is the public Beacon Deposit contract, which provides nonzero native ETH transaction examples. The SOL source is a public wallet account with recent nonzero native SOL balance deltas. The Hyperliquid address is the public `[ Systemic Strategies ] HyperGrowth` vault. It is a normal user vault, not HLP or Liquidator, and is fetched through the same CCXT venue path used by other exchange-like accounts.
 
 The live proof writes these files under `prototype-output/`:
 
@@ -136,9 +136,11 @@ hyperliquid_vault_snapshot.csv, hyperliquid_vault_transactions.csv,
 summary.json
 ```
 
-`summary.json` includes per-source row counts and Postgres table counts for `users`, `accounts`, `ingestion_sources`, `assets`, `portfolio_views`, `position_snapshots`, and `transactions`.
+`summary.json` includes per-source row counts, row-quality counters, run metadata, and Postgres table counts for `users`, `accounts`, `ingestion_sources`, `assets`, `portfolio_views`, `position_snapshots`, and `transactions`. `portfolio_views` can be `0` for live exporter runs because those exporters emit asset-level position snapshots rather than aggregate portfolio overview rows.
 
 GitHub Actions runs the same proof in `.github/workflows/live-prototype.yml` with a minimal `pgvector/pgvector:pg16` service container and uploads `prototype-output/` as the `live-prototype-output` artifact.
+
+Committed reviewer artifacts from the latest successful proof run are stored under `artifacts/live-prototype-output/`. These files are snapshots for review convenience; the workflow remains the source of truth for regenerating them.
 
 For local Postgres testing, one minimal database option is:
 
@@ -191,9 +193,9 @@ pg_store.apply_migrations()
 pg_store.add_transaction_csv("fixtures/transaction_history_2026-04-22.csv", pftl_wallet_address="r...")
 ```
 
-## Live Tests
+## Live Integration Checks
 
-The test suite includes live tests, not fake exchange or chain adapters:
+The test suite includes live integration checks against public endpoints:
 
 - CCXT Hyperliquid public vault snapshot and trades.
 - BTC address snapshot and transactions.
@@ -204,7 +206,7 @@ These tests make public network calls and use structural assertions because bala
 
 ## Out Of Scope
 
-The v0 package does not implement:
+This prototype does not implement:
 
 - Embedding generation, RAG retrieval, or semantic search queries.
 - Query modeling beyond a minimal `portfolio_at` readback helper.
@@ -213,7 +215,7 @@ The v0 package does not implement:
 
 The intended next layer can derive signal events and privacy-scoped analysis documents from normalized history, but this package stops at CSV export, CSV ingestion, JSONL review storage, and Postgres persistence.
 
-## Open Questions
+## Future Work
 
 - How much derivative-specific detail should be preserved in CSV columns versus `raw_json`.
 - Which chain/indexer providers should be official defaults for production transaction history.

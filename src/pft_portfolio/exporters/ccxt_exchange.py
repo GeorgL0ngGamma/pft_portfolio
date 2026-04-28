@@ -24,6 +24,7 @@ def export_ccxt_portfolio_snapshot(
     exchange = _make_exchange(exchange_id, exchange_options)
     account = account_ref or f"ccxt:{exchange_id}"
     fetch_params = params or {}
+    venue_address = _venue_address(fetch_params)
     timestamp = as_of or utc_now()
     rows: list[dict[str, Any]] = []
     errors: list[Exception] = []
@@ -31,14 +32,14 @@ def export_ccxt_portfolio_snapshot(
     if fetch_balances and exchange.has.get("fetchBalance"):
         try:
             balance = exchange.fetch_balance(fetch_params)
-            rows.extend(_balance_rows(balance, exchange_id, user_id, account, timestamp))
+            rows.extend(_balance_rows(balance, exchange_id, user_id, account, timestamp, venue_address))
         except Exception as exc:  # pragma: no cover - exercised by live exchange differences
             errors.append(exc)
 
     if fetch_positions and exchange.has.get("fetchPositions"):
         try:
             positions = exchange.fetch_positions(None, fetch_params)
-            rows.extend(_position_rows(positions, exchange_id, user_id, account, timestamp))
+            rows.extend(_position_rows(positions, exchange_id, user_id, account, timestamp, venue_address))
         except Exception as exc:  # pragma: no cover - exercised by live exchange differences
             errors.append(exc)
 
@@ -63,13 +64,15 @@ def export_ccxt_transaction_history(
     if not exchange.has.get("fetchMyTrades"):
         raise NotImplementedError(f"{exchange_id} does not advertise fetchMyTrades in CCXT")
     account = account_ref or f"ccxt:{exchange_id}"
-    trades = exchange.fetch_my_trades(symbol, since, limit, params or {})
+    fetch_params = params or {}
+    venue_address = _venue_address(fetch_params)
+    trades = exchange.fetch_my_trades(symbol, since, limit, fetch_params)
     rows: list[dict[str, Any]] = []
     for trade in trades:
-        rows.append(_trade_row(trade, exchange_id, user_id, account))
+        rows.append(_trade_row(trade, exchange_id, user_id, account, venue_address))
         fee = trade.get("fee") or {}
         if fee.get("cost") not in (None, "", 0, "0", "0.0"):
-            rows.append(_fee_row(trade, exchange_id, user_id, account))
+            rows.append(_fee_row(trade, exchange_id, user_id, account, venue_address))
     return write_transaction_csv(output_path, rows)
 
 
@@ -84,7 +87,9 @@ def _make_exchange(exchange_id: str, exchange_options: dict[str, Any] | None):
     return exchange_class(options)
 
 
-def _balance_rows(balance: dict[str, Any], exchange_id: str, user_id: str, account_ref: str, as_of: str) -> list[dict[str, Any]]:
+def _balance_rows(
+    balance: dict[str, Any], exchange_id: str, user_id: str, account_ref: str, as_of: str, address: str | None
+) -> list[dict[str, Any]]:
     rows = []
     totals = balance.get("total") or {}
     for asset, amount in sorted(totals.items()):
@@ -100,6 +105,7 @@ def _balance_rows(balance: dict[str, Any], exchange_id: str, user_id: str, accou
                 "symbol": asset,
                 "instrument_type": "spot",
                 "asset_class": "crypto",
+                "address": address,
                 "venue": exchange_id,
                 "price": None,
                 "change_1h_pct": None,
@@ -116,7 +122,9 @@ def _balance_rows(balance: dict[str, Any], exchange_id: str, user_id: str, accou
     return rows
 
 
-def _position_rows(positions: list[dict[str, Any]], exchange_id: str, user_id: str, account_ref: str, as_of: str) -> list[dict[str, Any]]:
+def _position_rows(
+    positions: list[dict[str, Any]], exchange_id: str, user_id: str, account_ref: str, as_of: str, address: str | None
+) -> list[dict[str, Any]]:
     rows = []
     for position in positions:
         amount = position.get("contracts") or position.get("contractSize") or _info(position).get("szi")
@@ -135,6 +143,7 @@ def _position_rows(positions: list[dict[str, Any]], exchange_id: str, user_id: s
                 "symbol": symbol,
                 "instrument_type": _instrument_type_from_position(position),
                 "asset_class": "crypto",
+                "address": address,
                 "venue": exchange_id,
                 "external_id": position.get("id"),
                 "price": _first(position, "markPrice", "entryPrice"),
@@ -152,7 +161,7 @@ def _position_rows(positions: list[dict[str, Any]], exchange_id: str, user_id: s
     return rows
 
 
-def _trade_row(trade: dict[str, Any], exchange_id: str, user_id: str, account_ref: str) -> dict[str, Any]:
+def _trade_row(trade: dict[str, Any], exchange_id: str, user_id: str, account_ref: str, address: str | None = None) -> dict[str, Any]:
     timestamp = _timestamp_ms_to_rfc3339(trade.get("timestamp"))
     symbol = trade.get("symbol")
     info = _info(trade)
@@ -165,6 +174,8 @@ def _trade_row(trade: dict[str, Any], exchange_id: str, user_id: str, account_re
         "symbol": symbol,
         "instrument_type": _instrument_type_from_symbol(symbol),
         "asset_class": "crypto",
+        "address": address,
+        "tx_hash": info.get("hash"),
         "venue": exchange_id,
         "external_id": trade.get("id") or trade.get("order"),
         "fee_amount": (trade.get("fee") or {}).get("cost"),
@@ -180,8 +191,9 @@ def _trade_row(trade: dict[str, Any], exchange_id: str, user_id: str, account_re
     }
 
 
-def _fee_row(trade: dict[str, Any], exchange_id: str, user_id: str, account_ref: str) -> dict[str, Any]:
+def _fee_row(trade: dict[str, Any], exchange_id: str, user_id: str, account_ref: str, address: str | None = None) -> dict[str, Any]:
     fee = trade.get("fee") or {}
+    info = _info(trade)
     return {
         "user_id": user_id,
         "account_ref": account_ref,
@@ -191,6 +203,8 @@ def _fee_row(trade: dict[str, Any], exchange_id: str, user_id: str, account_ref:
         "symbol": fee.get("currency"),
         "instrument_type": "spot",
         "asset_class": "crypto",
+        "address": address,
+        "tx_hash": info.get("hash"),
         "venue": exchange_id,
         "external_id": f"fee:{trade.get('id') or trade.get('order')}",
         "fee_amount": fee.get("cost"),
@@ -217,6 +231,11 @@ def _timestamp_ms_to_rfc3339(value: Any) -> str | None:
 def _info(value: dict[str, Any]) -> dict[str, Any]:
     info = value.get("info")
     return info if isinstance(info, dict) else {}
+
+
+def _venue_address(params: dict[str, Any]) -> str | None:
+    user = params.get("user")
+    return str(user) if user not in (None, "") else None
 
 
 def _first(value: dict[str, Any], *keys: str) -> Any:
