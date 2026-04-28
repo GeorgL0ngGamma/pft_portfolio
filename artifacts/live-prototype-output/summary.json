@@ -1,0 +1,75 @@
+{
+  "generated_at": "2026-04-28T22:14:47Z",
+  "git_sha": "9153d32e78200cb62c10aea0c9bee68dbe08844f",
+  "pftl_wallet_address": "prototype-pftl-wallet",
+  "postgres_counts": {
+    "accounts": 4,
+    "assets": 34,
+    "ingestion_sources": 8,
+    "portfolio_views": 0,
+    "position_snapshots": 33,
+    "transactions": 16,
+    "users": 1
+  },
+  "prototype": "btc_eth_sol_hyperliquid_csv_to_postgres",
+  "sources": [
+    {
+      "address": "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
+      "economic_rows": 2,
+      "failed_transactions": 0,
+      "fee_rows": 0,
+      "positions": 1,
+      "snapshot_csv": "prototype-output/btc_snapshot.csv",
+      "source": "btc",
+      "stored_snapshot_records": 1,
+      "stored_transaction_records": 2,
+      "transactions": 2,
+      "transactions_csv": "prototype-output/btc_transactions.csv",
+      "zero_amount_transactions": 0
+    },
+    {
+      "address": "0x00000000219ab540356cBB839Cbe05303d7705Fa",
+      "economic_rows": 2,
+      "failed_transactions": 0,
+      "fee_rows": 0,
+      "positions": 1,
+      "snapshot_csv": "prototype-output/eth_snapshot.csv",
+      "source": "eth",
+      "stored_snapshot_records": 1,
+      "stored_transaction_records": 2,
+      "transactions": 2,
+      "transactions_csv": "prototype-output/eth_transactions.csv",
+      "zero_amount_transactions": 0
+    },
+    {
+      "address": "AwA1urYEnZpCQfkB9w9rFAhTSicqniimBfu9yNnuZTSf",
+      "economic_rows": 2,
+      "failed_transactions": 0,
+      "fee_rows": 0,
+      "positions": 1,
+      "snapshot_csv": "prototype-output/sol_snapshot.csv",
+      "source": "sol",
+      "stored_snapshot_records": 1,
+      "stored_transaction_records": 2,
+      "transactions": 2,
+      "transactions_csv": "prototype-output/sol_transactions.csv",
+      "zero_amount_transactions": 0
+    },
+    {
+      "address": "0xd6e56265890b76413d1d527eb9b75e334c0c5b42",
+      "economic_rows": 5,
+      "failed_transactions": 0,
+      "fee_rows": 5,
+      "positions": 30,
+      "snapshot_csv": "prototype-output/hyperliquid_vault_snapshot.csv",
+      "source": "hyperliquid_vault",
+      "stored_snapshot_records": 30,
+      "stored_transaction_records": 10,
+      "transactions": 10,
+      "transactions_csv": "prototype-output/hyperliquid_vault_transactions.csv",
+      "zero_amount_transactions": 0
+    }
+  ],
+  "workflow_run_id": "25080417883",
+  "workflow_url": "https://github.com/GeorgL0ngGamma/pft_portfolio/actions/runs/25080417883"
+}
