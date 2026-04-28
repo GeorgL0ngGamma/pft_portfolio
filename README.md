@@ -106,6 +106,51 @@ pft-portfolio postgres-add transactions fixtures/transaction_history_2026-04-22.
 
 The migration enables `pgvector` and creates `analysis_documents` plus `analysis_embeddings` for derived context chunks. Trading or research agents should consume derived `signal_events` and privacy-scoped analysis documents, not unrestricted raw CSV rows by default.
 
+## Live Prototype Proof
+
+The repository includes an executable live proof that pulls public data, writes CSVs, normalizes them, and upserts them into Postgres with `pgvector` enabled:
+
+```bash
+PYTHONPATH=src DATABASE_URL="postgresql://postgres:postgres@localhost:5432/pft_portfolio" \
+  python3 examples/live_prototype.py --output-dir prototype-output
+```
+
+The proof sources are intentionally public and require no private keys:
+
+```text
+BTC address: 1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa
+ETH address: 0xde0B295669a9FD93d5F28D9Ec85E40f4cb697BAe
+SOL address: So11111111111111111111111111111111111111112
+Hyperliquid vault: 0xd6e56265890b76413d1d527eb9b75e334c0c5b42
+```
+
+The Hyperliquid address is the public `[ Systemic Strategies ] HyperGrowth` vault. It is a normal user vault, not HLP or Liquidator, and is fetched through the same CCXT venue path used by other exchange-like accounts.
+
+The live proof writes these files under `prototype-output/`:
+
+```text
+btc_snapshot.csv, btc_transactions.csv,
+eth_snapshot.csv, eth_transactions.csv,
+sol_snapshot.csv, sol_transactions.csv,
+hyperliquid_vault_snapshot.csv, hyperliquid_vault_transactions.csv,
+summary.json
+```
+
+`summary.json` includes per-source row counts and Postgres table counts for `users`, `accounts`, `ingestion_sources`, `assets`, `portfolio_views`, `position_snapshots`, and `transactions`.
+
+GitHub Actions runs the same proof in `.github/workflows/live-prototype.yml` with a minimal `pgvector/pgvector:pg16` service container and uploads `prototype-output/` as the `live-prototype-output` artifact.
+
+For local Postgres testing, one minimal database option is:
+
+```bash
+docker run --rm --name pft-portfolio-pgvector \
+  -e POSTGRES_DB=pft_portfolio \
+  -e POSTGRES_USER=postgres \
+  -e POSTGRES_PASSWORD=postgres \
+  -p 5432:5432 \
+  pgvector/pgvector:pg16
+```
+
 ## Exporters
 
 Exporters produce dated CSV files that the ingestion path can read:
@@ -150,12 +195,12 @@ pg_store.add_transaction_csv("fixtures/transaction_history_2026-04-22.csv", pftl
 
 The test suite includes live tests, not fake exchange or chain adapters:
 
-- CCXT Hyperliquid public account snapshot and trades.
+- CCXT Hyperliquid public vault snapshot and trades.
 - BTC address snapshot and transactions.
 - ETH address snapshot and transactions.
 - SOL address snapshot and transactions.
 
-These tests make public network calls and use structural assertions because balances and positions move.
+These tests make public network calls and use structural assertions because balances and positions move. The GitHub Actions live prototype proof is a stronger end-to-end check because it also starts Postgres with `pgvector`, applies migrations, stores all four sources, and uploads the resulting CSV/JSON artifact.
 
 ## Out Of Scope
 

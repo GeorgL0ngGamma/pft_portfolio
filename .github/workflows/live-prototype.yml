@@ -1,0 +1,61 @@
+name: Live Prototype
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/live-prototype.yml"
+      - "examples/live_prototype.py"
+      - "src/pft_portfolio/**"
+      - "tests/**"
+      - "pyproject.toml"
+
+jobs:
+  live-prototype:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_DB: pft_portfolio
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d pft_portfolio"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/pft_portfolio
+      PYTHONPATH: src
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install package
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e '.[test,postgres]'
+
+      - name: Run deterministic tests
+        run: pytest tests/test_csv_ingest.py tests/test_storage.py tests/test_postgres_store.py
+
+      - name: Run live prototype proof
+        run: python examples/live_prototype.py --output-dir prototype-output
+
+      - name: Upload prototype artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-prototype-output
+          path: prototype-output
