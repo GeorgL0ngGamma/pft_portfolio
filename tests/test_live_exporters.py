@@ -11,7 +11,7 @@ from pft_portfolio.exporters.ethereum import export_ethereum_snapshot, export_et
 from pft_portfolio.exporters.solana import export_solana_snapshot, export_solana_transaction_history
 
 
-HYPERLIQUID_HLP_CHILD = "0x010461c14e146ac35fe42271bdc1134ee31c703a"
+HYPERLIQUID_TOP_VAULT = "0xd6e56265890b76413d1d527eb9b75e334c0c5b42"
 BTC_GENESIS_ADDRESS = "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"
 ETH_FOUNDATION_ADDRESS = "0xde0B295669a9FD93d5F28D9Ec85E40f4cb697BAe"
 WRAPPED_SOL_MINT = "So11111111111111111111111111111111111111112"
@@ -25,15 +25,15 @@ def test_live_ccxt_hyperliquid_exports_csv_snapshot_and_transactions(tmp_path: P
     export_ccxt_portfolio_snapshot(
         "hyperliquid",
         snapshot_csv,
-        account_ref=f"hyperliquid:{HYPERLIQUID_HLP_CHILD}",
-        params={"user": HYPERLIQUID_HLP_CHILD},
+        account_ref=f"hyperliquid:{HYPERLIQUID_TOP_VAULT}",
+        params={"user": HYPERLIQUID_TOP_VAULT},
         fetch_balances=False,
     )
     export_ccxt_transaction_history(
         "hyperliquid",
         transactions_csv,
-        account_ref=f"hyperliquid:{HYPERLIQUID_HLP_CHILD}",
-        params={"user": HYPERLIQUID_HLP_CHILD},
+        account_ref=f"hyperliquid:{HYPERLIQUID_TOP_VAULT}",
+        params={"user": HYPERLIQUID_TOP_VAULT},
         limit=5,
     )
 
