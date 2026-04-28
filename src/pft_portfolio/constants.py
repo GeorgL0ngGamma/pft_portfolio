@@ -4,6 +4,21 @@ INPUT_TYPES = ("portfolio_snapshot", "transaction_history")
 
 INSTRUMENT_TYPES = ("spot", "perp", "future", "option", "yield")
 
+EXTENDED_COLUMNS = (
+    "asset_class",
+    "chain",
+    "address",
+    "tx_hash",
+    "block_number",
+    "log_index",
+    "external_id",
+    "venue",
+    "protocol",
+    "counterparty",
+    "fee_amount",
+    "fee_symbol",
+)
+
 SNAPSHOT_COLUMNS = (
     "user_id",
     "account_ref",
@@ -21,6 +36,7 @@ SNAPSHOT_COLUMNS = (
     "avg_buy_price",
     "profit_loss_value",
     "profit_loss_pct",
+    *EXTENDED_COLUMNS,
 )
 
 TRANSACTION_COLUMNS = (
@@ -38,6 +54,7 @@ TRANSACTION_COLUMNS = (
     "profit_loss_value",
     "profit_loss_pct",
     "holdings_after",
+    *EXTENDED_COLUMNS,
 )
 
 EXPORT_EXTRA_COLUMNS = ("raw_json",)
@@ -51,8 +68,6 @@ ASSET_SYMBOLS = {
     "ethereum": "ETH",
     "ether": "ETH",
     "eth": "ETH",
-    "ethereum classic": "ETC",
-    "etc": "ETC",
     "solana": "SOL",
     "sol": "SOL",
     "usd coin": "USDC",

@@ -10,7 +10,7 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any, Iterable
 
-from .canonical import stable_id
+from .canonical import semantic_id
 from .constants import (
     ASSET_SYMBOLS,
     DEFAULT_ACCOUNT_REF,
@@ -64,7 +64,8 @@ def ingest_transaction_history_csv(
                 "source_row": source_row,
                 "raw_row": _raw_row(row),
             }
-            record["id"] = stable_id("txn", record)
+            record.update(_extended_fields(row, record["symbol"], record["account_ref"]))
+            record["id"] = semantic_id("txn", record)
             records.append(record)
     return {"input_type": "transaction_history", "transactions": records}
 
@@ -164,7 +165,7 @@ def _ingest_cmc_snapshot(
         "source_csv": Path(path).name,
         "raw_overview": dict(overview_pairs),
     }
-    overview["id"] = stable_id("overview", overview)
+    overview["id"] = semantic_id("overview", overview)
 
     asset_header = rows[assets_index + 1]
     positions: list[dict[str, Any]] = []
@@ -195,7 +196,8 @@ def _ingest_cmc_snapshot(
             "source_row": source_row,
             "raw_row": raw,
         }
-        record["id"] = stable_id("snapshot", record)
+        record.update(_extended_fields(raw, record["symbol"], record["account_ref"]))
+        record["id"] = semantic_id("snapshot", record)
         positions.append(record)
 
     return {"input_type": "portfolio_snapshot", "overview": overview, "positions": positions}
@@ -229,7 +231,8 @@ def _ingest_standard_snapshot(path: str | Path, *, user_id: str, account_ref: st
                 "source_row": source_row,
                 "raw_row": _raw_row(row),
             }
-            record["id"] = stable_id("snapshot", record)
+            record.update(_extended_fields(row, record["symbol"], record["account_ref"]))
+            record["id"] = semantic_id("snapshot", record)
             positions.append(record)
     return {"input_type": "portfolio_snapshot", "overview": None, "positions": positions}
 
@@ -278,6 +281,69 @@ def _instrument_type(value: str | None) -> str:
         return "spot"
     normalized = value.strip().lower()
     return normalized if normalized in INSTRUMENT_TYPES else "spot"
+
+
+def _extended_fields(row: dict[str, Any], symbol: str | None, account_ref: str | None) -> dict[str, str | None]:
+    chain = _normalize_chain(_pick(row, "chain", "network", "blockchain")) or _chain_from_symbol_or_account(symbol, account_ref)
+    venue = _pick(row, "venue", "exchange", "exchange_id") or _venue_from_account(account_ref)
+    address = _pick(row, "address", "wallet_address", "chain_address") or _address_from_account(account_ref, chain)
+    return {
+        "asset_class": _pick(row, "asset_class") or ("crypto" if symbol else None),
+        "chain": chain,
+        "address": address,
+        "tx_hash": _pick(row, "tx_hash", "txid", "hash", "signature"),
+        "block_number": clean_decimal(_pick(row, "block_number", "block", "slot")),
+        "log_index": clean_decimal(_pick(row, "log_index", "event_index", "instruction_index")),
+        "external_id": _pick(row, "external_id", "trade_id", "order_id", "id"),
+        "venue": venue,
+        "protocol": _pick(row, "protocol"),
+        "counterparty": _pick(row, "counterparty", "from", "to"),
+        "fee_amount": clean_decimal(_pick(row, "fee_amount", "fee_cost")),
+        "fee_symbol": _pick(row, "fee_symbol", "fee_currency"),
+    }
+
+
+def _normalize_chain(value: str | None) -> str | None:
+    if not value:
+        return None
+    normalized = value.strip().lower()
+    aliases = {
+        "bitcoin": "BTC",
+        "btc": "BTC",
+        "ethereum": "ETH",
+        "eth": "ETH",
+        "solana": "SOL",
+        "sol": "SOL",
+    }
+    return aliases.get(normalized, value.strip().upper())
+
+
+def _chain_from_symbol_or_account(symbol: str | None, account_ref: str | None) -> str | None:
+    if account_ref:
+        prefix = account_ref.split(":", 1)[0].lower()
+        if prefix in {"btc", "eth", "sol"}:
+            return prefix.upper()
+    if symbol in {"BTC", "ETH", "SOL"}:
+        return symbol
+    return None
+
+
+def _venue_from_account(account_ref: str | None) -> str | None:
+    if not account_ref:
+        return None
+    prefix, _, value = account_ref.partition(":")
+    if prefix == "ccxt" and value:
+        return value
+    return None
+
+
+def _address_from_account(account_ref: str | None, chain: str | None) -> str | None:
+    if not account_ref or not chain:
+        return None
+    prefix, _, value = account_ref.partition(":")
+    if prefix.lower() == chain.lower() and value:
+        return value
+    return None
 
 
 def _raw_row(row: dict[str, Any]) -> dict[str, str]:
