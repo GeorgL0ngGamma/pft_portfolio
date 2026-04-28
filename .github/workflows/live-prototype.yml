@@ -2,6 +2,13 @@ name: Live Prototype
 
 on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - ".github/workflows/live-prototype.yml"
+      - "examples/live_prototype.py"
+      - "src/pft_portfolio/**"
+      - "tests/**"
+      - "pyproject.toml"
   push:
     branches: [main]
     paths:
