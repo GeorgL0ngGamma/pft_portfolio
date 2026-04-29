@@ -56,7 +56,7 @@ jobs:
           python -m pip install -e '.[test,postgres]'
 
       - name: Run deterministic tests
-        run: pytest tests/test_csv_ingest.py tests/test_storage.py tests/test_postgres_store.py
+        run: pytest
 
       - name: Run live prototype proof
         run: python examples/live_prototype.py --output-dir prototype-output

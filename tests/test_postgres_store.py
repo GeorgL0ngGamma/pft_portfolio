@@ -31,6 +31,9 @@ def test_postgres_schema_has_pgvector_and_tasknode_tables() -> None:
         assert f"create table if not exists {table}" in sql
     assert "embedding vector(1536)" in sql
     assert "privacy_tier" in sql
+    assert "drop index if exists transactions_chain_tx_idx" in sql
+    assert "transactions_chain_event_idx" in sql
+    assert "002_transaction_chain_event_index" in sql
 
 
 def test_semantic_ids_ignore_csv_provenance() -> None:
@@ -47,11 +50,27 @@ def test_semantic_ids_ignore_csv_provenance() -> None:
     assert record["id"] == semantic_id("txn", duplicate)
 
 
+def test_chain_transaction_semantic_ids_distinguish_rows_without_log_index() -> None:
+    base = {
+        "input_type": "transaction_history",
+        "user_id": "demo",
+        "account_ref": "eth:0xabc",
+        "timestamp": "2026-04-22T10:00:00Z",
+        "chain": "ETH",
+        "tx_hash": "0xtx",
+        "instrument_type": "spot",
+    }
+    transfer = {**base, "activity_type": "deposit", "symbol": "ETH", "amount": "1", "value": "3000"}
+    fee = {**base, "activity_type": "fee", "symbol": "ETH", "amount": "0.01", "fee_amount": "0.01", "fee_symbol": "ETH"}
+
+    assert semantic_id("txn", transfer) != semantic_id("txn", fee)
+
+
 def test_transaction_ingest_preserves_chain_and_exchange_provenance(tmp_path: Path) -> None:
     csv_path = tmp_path / "eth_trade.csv"
     csv_path.write_text(
-        "timestamp,activity_type,asset_name,symbol,amount,price,value,currency,chain,address,tx_hash,block_number,log_index,venue,external_id,fee_amount,fee_symbol\n"
-        "2026-04-22T10:00:00Z,buy,Ethereum,ETH,1,3000,3000,USD,ethereum,0xabc,0xtx,123,4,coinbase,trade-1,2,USD\n",
+        "timestamp,activity_type,asset_name,symbol,amount,price,value,currency,chain,address,contract_address,tx_hash,block_number,log_index,venue,external_id,fee_amount,fee_symbol\n"
+        "2026-04-22T10:00:00Z,buy,Ethereum,ETH,1,3000,3000,USD,ethereum,0xabc,0xtoken,0xtx,123,4,coinbase,trade-1,2,USD\n",
         encoding="utf-8",
     )
 
@@ -60,6 +79,7 @@ def test_transaction_ingest_preserves_chain_and_exchange_provenance(tmp_path: Pa
     assert record["asset_class"] == "crypto"
     assert record["chain"] == "ETH"
     assert record["address"] == "0xabc"
+    assert record["contract_address"] == "0xtoken"
     assert record["tx_hash"] == "0xtx"
     assert record["block_number"] == "123"
     assert record["log_index"] == "4"

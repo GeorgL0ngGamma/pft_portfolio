@@ -39,3 +39,14 @@ def test_store_returns_empty_view_before_first_snapshot(tmp_path: Path) -> None:
     assert portfolio["latest_snapshot_as_of"] is None
     assert portfolio["positions"] == []
     assert portfolio["transactions"] == []
+
+
+def test_store_skips_duplicate_semantic_ids(tmp_path: Path) -> None:
+    store = PortfolioStore(tmp_path / "portfolio-history.jsonl")
+
+    first_count = store.add_transaction_csv(FIXTURES / "transaction_history_2026-04-22.csv")
+    second_count = store.add_transaction_csv(FIXTURES / "transaction_history_2026-04-22.csv")
+
+    assert first_count == 4
+    assert second_count == 0
+    assert len(store.read_records()) == 4

@@ -23,10 +23,16 @@ class PortfolioStore:
 
     def append_records(self, records: Iterable[dict[str, Any]]) -> int:
         self.path.parent.mkdir(parents=True, exist_ok=True)
+        existing_ids = {record.get("id") for record in self.read_records() if record.get("id")}
         count = 0
         with self.path.open("a", encoding="utf-8") as handle:
             for record in records:
+                record_id = record.get("id")
+                if record_id and record_id in existing_ids:
+                    continue
                 handle.write(json.dumps(record, ensure_ascii=False, sort_keys=True) + "\n")
+                if record_id:
+                    existing_ids.add(record_id)
                 count += 1
         return count
 

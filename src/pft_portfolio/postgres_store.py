@@ -147,9 +147,14 @@ CREATE TABLE IF NOT EXISTS transactions (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS transactions_chain_tx_idx
-    ON transactions (user_id, chain, tx_hash, COALESCE(log_index, -1))
-    WHERE tx_hash IS NOT NULL;
+DROP INDEX IF EXISTS transactions_chain_tx_idx;
+
+CREATE UNIQUE INDEX IF NOT EXISTS transactions_chain_event_idx
+    ON transactions (
+        user_id, chain, tx_hash, COALESCE(log_index, -1),
+        activity_type, asset_id, COALESCE(external_id, '')
+    )
+    WHERE chain IS NOT NULL AND tx_hash IS NOT NULL;
 
 CREATE UNIQUE INDEX IF NOT EXISTS transactions_external_idx
     ON transactions (user_id, venue, external_id)
@@ -206,6 +211,10 @@ CREATE INDEX IF NOT EXISTS signal_events_features_idx
 
 INSERT INTO schema_migrations (version)
 VALUES ('001_postgres_pgvector_portfolio')
+ON CONFLICT (version) DO NOTHING;
+
+INSERT INTO schema_migrations (version)
+VALUES ('002_transaction_chain_event_index')
 ON CONFLICT (version) DO NOTHING;
 """
 

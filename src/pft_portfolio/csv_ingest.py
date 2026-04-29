@@ -291,6 +291,7 @@ def _extended_fields(row: dict[str, Any], symbol: str | None, account_ref: str |
         "asset_class": _pick(row, "asset_class") or ("crypto" if symbol else None),
         "chain": chain,
         "address": address,
+        "contract_address": _pick(row, "contract_address", "token_address", "token_contract"),
         "tx_hash": _pick(row, "tx_hash", "txid", "hash", "signature"),
         "block_number": clean_decimal(_pick(row, "block_number", "block", "slot")),
         "log_index": clean_decimal(_pick(row, "log_index", "event_index", "instruction_index")),

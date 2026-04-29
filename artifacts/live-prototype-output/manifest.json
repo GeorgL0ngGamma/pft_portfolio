@@ -1,6 +1,6 @@
 {
   "feedback": {
-    "prompt": "Review each source fixture below. Confirm that position_snapshot and transaction_history CSVs contain expected provenance fields (chain, venue, tx_hash, block_number, address, fee_amount, fee_symbol). Report issues at https://github.com/GeorgL0ngGamma/pft_portfolio/issues/new with the fixture name and a short description.",
+    "prompt": "Review each source fixture below. Confirm that portfolio_snapshot and transaction_history CSVs contain expected provenance fields (chain, venue, tx_hash, block_number, address, fee_amount, fee_symbol). Report issues at https://github.com/GeorgL0ngGamma/pft_portfolio/issues/new with the fixture name and a short description.",
     "submit_url": "https://github.com/GeorgL0ngGamma/pft_portfolio/issues/new"
   },
   "fixtures": {
@@ -36,7 +36,7 @@
         "fee_symbol",
         "raw_json"
       ],
-      "record_type": "position_snapshot",
+      "record_type": "portfolio_snapshot",
       "row_count": 1,
       "sha256": "702d7822d254483ab72e4e29a31ebb6af06410598774e84c6168804f2c2234a5",
       "source": "btc"
@@ -108,7 +108,7 @@
         "fee_symbol",
         "raw_json"
       ],
-      "record_type": "position_snapshot",
+      "record_type": "portfolio_snapshot",
       "row_count": 1,
       "sha256": "ccf10df05039818aa0881684bf0e60dda4345acac9d72ddefe99edff2bb51f42",
       "source": "eth"
@@ -180,7 +180,7 @@
         "fee_symbol",
         "raw_json"
       ],
-      "record_type": "position_snapshot",
+      "record_type": "portfolio_snapshot",
       "row_count": 30,
       "sha256": "66d9ea83f44cf099303379fcdebcfc8273a7e610a2069ccb323cfa9ee9b44480",
       "source": "hyperliquid_vault"
@@ -252,7 +252,7 @@
         "fee_symbol",
         "raw_json"
       ],
-      "record_type": "position_snapshot",
+      "record_type": "portfolio_snapshot",
       "row_count": 1,
       "sha256": "92dbda29a90336e8ce5ea5e377f79f1a40d8e7f97e830d7e6b034231ed3519bb",
       "source": "sol"
@@ -296,8 +296,8 @@
   "git_sha": "9153d32e78200cb62c10aea0c9bee68dbe08844f",
   "run_timestamp": "2026-04-28T22:14:47Z",
   "schema_version": "1.0.0",
-  "total_position_snapshot_rows": 33,
-  "total_position_snapshots": 4,
+  "total_portfolio_snapshot_files": 4,
+  "total_portfolio_snapshot_rows": 33,
   "total_transaction_rows": 16,
   "total_transactions": 4,
   "workflow_run_id": "25080417883",
