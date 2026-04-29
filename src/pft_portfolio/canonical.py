@@ -39,6 +39,7 @@ def semantic_identity(value: dict[str, Any]) -> dict[str, Any]:
             "asset_class",
             "chain",
             "address",
+            "contract_address",
             "venue",
             "protocol",
         )
@@ -46,8 +47,28 @@ def semantic_identity(value: dict[str, Any]) -> dict[str, Any]:
         return _identity(value, "input_type", "user_id", "account_ref", "as_of", "currency")
     if input_type == "transaction_history" and value.get("venue") and value.get("external_id"):
         return _identity(value, "input_type", "user_id", "venue", "external_id")
-    if input_type == "transaction_history" and value.get("chain") and value.get("tx_hash"):
+    if (
+        input_type == "transaction_history"
+        and value.get("chain")
+        and value.get("tx_hash")
+        and _has_value(value.get("log_index"))
+    ):
         return _identity(value, "input_type", "user_id", "chain", "tx_hash", "log_index")
+    if input_type == "transaction_history" and value.get("chain") and value.get("tx_hash"):
+        return _identity(
+            value,
+            "input_type",
+            "user_id",
+            "chain",
+            "tx_hash",
+            "activity_type",
+            "symbol",
+            "instrument_type",
+            "amount",
+            "value",
+            "fee_amount",
+            "fee_symbol",
+        )
     if input_type == "transaction_history" and value.get("tx_hash"):
         return _identity(value, "input_type", "user_id", "account_ref", "tx_hash", "log_index", "activity_type")
     if input_type == "transaction_history" and value.get("external_id"):
@@ -72,3 +93,7 @@ def semantic_identity(value: dict[str, Any]) -> dict[str, Any]:
 
 def _identity(value: dict[str, Any], *keys: str) -> dict[str, Any]:
     return {key: value.get(key) for key in keys}
+
+
+def _has_value(value: Any) -> bool:
+    return value not in (None, "")

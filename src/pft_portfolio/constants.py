@@ -8,6 +8,7 @@ EXTENDED_COLUMNS = (
     "asset_class",
     "chain",
     "address",
+    "contract_address",
     "tx_hash",
     "block_number",
     "log_index",

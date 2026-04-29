@@ -6,3 +6,7 @@ __pycache__/
 build/
 dist/
 portfolio-history.jsonl
+/prototype-output/
+/live-prototype-output/
+/live-prototype-output.zip
+/summary.md
